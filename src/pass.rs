@@ -761,7 +761,7 @@ mod test {
 }
         "#;
 
-        let pass: Pass = serde_json::from_str(&src).unwrap();
+        let pass: Pass = serde_json::from_str(src).unwrap();
 
         println!("{:#?}", pass);
     }

@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::util::*;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
@@ -135,10 +135,7 @@ impl Default for TextAlignment {
 
 impl TextAlignment {
     pub fn is_natural(&self) -> bool {
-        match *self {
-            TextAlignment::Natural => true,
-            _ => false,
-        }
+        matches!(*self, TextAlignment::Natural)
     }
 }
 

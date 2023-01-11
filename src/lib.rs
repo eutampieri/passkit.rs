@@ -149,12 +149,12 @@ impl PassSource {
 
     fn copy_source_files_to(&mut self, dir: &path::Path) -> PassResult<()> {
         fn walk(from: &path::Path, to: &path::Path) -> std::io::Result<()> {
-            for entry in fs::read_dir(&from)? {
+            for entry in fs::read_dir(from)? {
                 // println!("{:?}", entry?);
                 let entry = entry?;
                 let entry_path = &entry.path();
                 let target = entry_path
-                    .strip_prefix(&from)
+                    .strip_prefix(from)
                     .map_err(|__| std::io::Error::from(std::io::ErrorKind::Other))?;
                 fs::copy(entry.path(), to.join(target))?;
             }
@@ -162,7 +162,7 @@ impl PassSource {
             Ok(())
         }
 
-        walk(&path::Path::new(&self.source_directory), dir)
+        walk(path::Path::new(&self.source_directory), dir)
             .map_err(|_| PassCreateError::CantCopySourceToTemp)?;
 
         Ok(())
@@ -186,7 +186,7 @@ impl PassSource {
             Ok(manifest)
         }
 
-        self.manifest = enumerate(&dir).map_err(|_| PassCreateError::CantCalculateHashes)?;
+        self.manifest = enumerate(dir).map_err(|_| PassCreateError::CantCalculateHashes)?;
         Ok(())
     }
 

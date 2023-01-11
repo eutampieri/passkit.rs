@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub fn is_false(value: &bool) -> bool {
-    *value == false
+    !(*value)
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
