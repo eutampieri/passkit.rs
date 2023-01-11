@@ -1,18 +1,8 @@
-extern crate crypto;
-extern crate fs_extra;
-extern crate keychain_services;
-extern crate openssl;
-extern crate serde;
-extern crate serde_json;
-extern crate tempdir;
-extern crate zip;
-
 mod field;
 mod pass;
 mod personalization;
 mod util;
 
-use crypto::{digest::Digest, sha1::Sha1};
 use std::collections::HashMap;
 use std::fmt;
 use std::fs;
@@ -217,7 +207,9 @@ fn read_file_to_vec<P: AsRef<std::path::Path>>(path: P) -> std::io::Result<Vec<u
 
 #[inline]
 fn get_hash(content: &[u8]) -> String {
-    let mut hasher = Sha1::new();
-    hasher.input(content);
-    hasher.result_str()
+    use sha1::Digest;
+
+    let mut hasher = sha1::Sha1::new();
+    hasher.update(content);
+    hex::encode(hasher.finalize())
 }
