@@ -1,7 +1,7 @@
-use field::Field;
+use crate::field::Field;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use util::*;
+use crate::util::*;
 
 /// The top level of the pass.json file is a dictionary.
 #[derive(Debug, Clone, Serialize, Deserialize)]

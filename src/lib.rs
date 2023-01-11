@@ -20,9 +20,9 @@ use std::io::prelude::*;
 use std::path;
 use tempdir::TempDir;
 
-pub use field::*;
-pub use pass::*;
-pub use personalization::*;
+pub use crate::field::*;
+pub use crate::pass::*;
+pub use crate::personalization::*;
 
 // use Failure
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -41,7 +41,7 @@ pub enum PassCreateError {
 
 impl fmt::Display for PassCreateError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use PassCreateError::*;
+        use crate::PassCreateError::*;
         let stringified = match self {
             CantReadTempDir => "Can't read temporary directory".to_string(),
             CantReadEntry(cause) => format!("Can't read {}", cause),
