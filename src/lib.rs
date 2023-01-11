@@ -3,7 +3,6 @@ extern crate fs_extra;
 extern crate keychain_services;
 extern crate openssl;
 extern crate serde;
-extern crate serde_derive;
 extern crate serde_json;
 extern crate tempdir;
 extern crate zip;

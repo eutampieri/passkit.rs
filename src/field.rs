@@ -1,4 +1,4 @@
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use util::*;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]

@@ -1,5 +1,5 @@
 use field::Field;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use util::*;
 
@@ -622,12 +622,14 @@ mod test {
             .web_service(
                 "vxwxd7J8AlNNFPS8k0a0FfUFtq0ewzFdc",
                 "https://example.com/passes/",
-            ).relevant_date("2012-07-22T14:25-08:00".into())
+            )
+            .relevant_date("2012-07-22T14:25-08:00".into())
             .add_location((-122.3748889, 37.6189722))
             .add_barcode((
                 BarcodeFormat::PDF417,
                 "SFOJFK JOHN APPLESEED LH451 2012-07-22T14:25-08:00",
-            )).organization_name("Skyport Airways")
+            ))
+            .organization_name("Skyport Airways")
             .description("Skyport Boarding Pass")
             .logo_text("Skyport Airways")
             .foreground_color(rgb(22, 55, 110))
@@ -641,19 +643,22 @@ mod test {
                 "boardingTime",
                 "2:25 PM",
                 "Boarding time changed to %@.",
-            )).add_auxiliary_field(Field::new(
+            ))
+            .add_auxiliary_field(Field::new(
                 "FLIGHT",
                 "flightNewName",
                 "815",
                 "Flight number changed to %@",
-            )).add_auxiliary_field(("DESIG.", "class", "Coach"))
+            ))
+            .add_auxiliary_field(("DESIG.", "class", "Coach"))
             .add_auxiliary_field(("DATE", "date", "7/22"))
             .add_back_field(("PASSPORT", "passport", "Canadian/Canadien"))
             .add_back_field((
                 "RESIDENCE",
                 "residence",
                 "999 Infinite Loop, Apartment 42, Cupertino CA",
-            )).finish_boarding_pass(TransitType::Air);
+            ))
+            .finish_boarding_pass(TransitType::Air);
 
         println!("{}", serde_json::to_string_pretty(&pass).unwrap());
     }
