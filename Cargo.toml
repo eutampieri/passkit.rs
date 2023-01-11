@@ -8,6 +8,7 @@ name = "passkit"
 readme = "README.md"
 repository = "https://github.com/sergeysova/passkit.rs"
 version = "0.0.7"
+edition = "2018"
 
 [dependencies]
 fs_extra = "1.2"
