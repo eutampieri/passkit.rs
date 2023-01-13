@@ -57,7 +57,7 @@ impl From<std::io::Error> for PassCreateError {
     }
 }
 impl From<serde_json::Error> for PassCreateError {
-    fn from(e: serde_json::Error) -> Self {
+    fn from(_e: serde_json::Error) -> Self {
         Self::CantSerializePass
     }
 }
@@ -76,7 +76,6 @@ impl PassSource {
     pub fn new<S: Into<String>>(source: S) -> PassSource {
         PassSource {
             source_directory: source.into(),
-            ..Default::default()
         }
     }
 
@@ -95,7 +94,7 @@ impl PassSource {
         for file in fs::read_dir(&self.source_directory)?
             .map(|x| self.read_file(x))
             .chain(
-                (&["pass.json"])
+                ["pass.json"]
                     .iter()
                     .map(|x| Ok((x.to_string(), serde_json::to_vec(&pass)?))),
             )
