@@ -8,7 +8,6 @@ use std::fmt;
 use std::fs;
 use std::io::prelude::*;
 use std::path;
-use tempdir::TempDir;
 
 pub use crate::field::*;
 pub use crate::pass::*;
@@ -52,6 +51,17 @@ impl fmt::Display for PassCreateError {
 
 impl std::error::Error for PassCreateError {}
 
+impl From<std::io::Error> for PassCreateError {
+    fn from(_: std::io::Error) -> Self {
+        Self::CantCopySourceToTemp
+    }
+}
+impl From<serde_json::Error> for PassCreateError {
+    fn from(e: serde_json::Error) -> Self {
+        Self::CantSerializePass
+    }
+}
+
 type PassResult<T> = Result<T, PassCreateError>;
 type Manifest = HashMap<String, String>;
 
@@ -60,12 +70,6 @@ type Manifest = HashMap<String, String>;
 pub struct PassSource {
     /// place where images contains
     source_directory: String,
-
-    /// hashes of files to generate manifest.json
-    manifest: Manifest,
-
-    /// content of the pass
-    pass_content: Option<Pass>,
 }
 
 impl PassSource {
@@ -76,40 +80,93 @@ impl PassSource {
         }
     }
 
-    /// Add exists pass to source
-    pub fn add_pass(&mut self, pass: Pass) -> &mut Self {
-        self.pass_content = Some(pass);
-        self
+    /// Create .pkpass and return it as a byte array
+    pub fn build_pkpass(&mut self, pass: Option<Pass>) -> PassResult<Vec<u8>> {
+        use sha1::Digest;
+
+        let pass = self.resolve_pass_content(pass)?;
+
+        let mut out_file = Vec::new();
+        let mut zip_writer = zip::write::ZipWriter::new(std::io::Cursor::new(&mut out_file));
+
+        let mut manifest = Manifest::new();
+
+        // Add common files from specified folder
+        for file in fs::read_dir(&self.source_directory)?
+            .map(|x| self.read_file(x))
+            .chain(
+                (&["pass.json"])
+                    .iter()
+                    .map(|x| Ok((x.to_string(), serde_json::to_vec(&pass)?))),
+            )
+        {
+            let (filename, bytes) = file?;
+            // Calculate hash and update manifest
+            let hash = hex::encode(sha1::Sha1::digest(&bytes));
+            manifest.insert(filename.clone(), hash);
+
+            // Add file to ZIP
+            self.add_file_to_zip(&mut zip_writer, &filename, &bytes);
+        }
+
+        // Add manifest
+        self.add_file_to_zip(
+            &mut zip_writer,
+            "manifest.json",
+            &serde_json::to_vec(&manifest)?,
+        );
+
+        // Sign manifest
+        // TODO
+
+        zip_writer.finish().unwrap();
+        drop(zip_writer);
+        Ok(out_file)
     }
 
-    /// Create .pkpass file in target directory
-    pub fn build_pkpass(&mut self) -> PassResult<()> {
-        self.resolve_pass_content()?;
-        let tmp = Self::create_tmp_dir()?;
+    fn read_file(
+        &self,
+        file: std::io::Result<std::fs::DirEntry>,
+    ) -> Result<(String, Vec<u8>), PassCreateError> {
+        let file = file?;
+        let entry_path = &file.path();
+        let target = entry_path
+            .strip_prefix(&self.source_directory)
+            .map_err(|__| std::io::Error::from(std::io::ErrorKind::Other))?;
 
-        self.copy_source_files_to(tmp.path())?;
-        self.write_pass_file_to(tmp.path())?;
-        self.calculate_hashes_of(tmp.path())?;
-        self.write_manifest_to(tmp.path())?;
-        Ok(())
+        let bytes = std::fs::read(entry_path)?;
+        Ok((target.to_string_lossy().to_string(), bytes))
+    }
+
+    fn add_file_to_zip<W: Write + Seek>(
+        &self,
+        zip_writer: &mut zip::ZipWriter<W>,
+        filename: &str,
+        bytes: &[u8],
+    ) {
+        zip_writer.start_file(filename, Default::default());
+        zip_writer.write_all(bytes);
     }
 
     /// Parse pass.json from source directory if Pass not provided
-    fn resolve_pass_content(&mut self) -> PassResult<()> {
-        if self.pass_content.is_none() && self.is_pass_file_exists_in_source() {
-            self.pass_content = Some(self.read_pass_file_from_source()?);
+    fn resolve_pass_content(&mut self, pass_content: Option<Pass>) -> PassResult<Pass> {
+        if pass_content.is_none() && self.pass_file_exists_in_source() {
+            Ok(self.read_pass_file_from_source()?)
+        } else if let Some(p) = pass_content {
+            Ok(p)
+        } else {
+            Err(PassCreateError::PassContentNotFound)
         }
-        Ok(())
     }
 
-    fn is_pass_file_exists_in_source(&self) -> bool {
+    fn pass_file_exists_in_source(&self) -> bool {
         self.pass_source_file_path().exists()
     }
 
     fn read_pass_file_from_source(&self) -> PassResult<Pass> {
-        let content = read_file_to_vec(self.pass_source_file_path())
+        let content = std::fs::read_to_string(self.pass_source_file_path())
             .map_err(|_| PassCreateError::CantReadEntry("pass.json".to_string()))?;
-        let pass: Pass = serde_json::from_slice(&content)
+        let pass: Pass = serde_json::from_str(&content)
             .map_err(|cause| PassCreateError::CantParsePassFile(cause.to_string()))?;
         Ok(pass)
     }
@@ -118,98 +175,4 @@ impl PassSource {
         let path = path::Path::new(&self.source_directory).join("pass.json");
         path.into_boxed_path()
     }
-
-    fn create_tmp_dir() -> PassResult<TempDir> {
-        TempDir::new("passsource").map_err(|_| PassCreateError::CantCreateTempDir)
-    }
-
-    fn write_pass_file_to(&self, dir: &path::Path) -> PassResult<()> {
-        if !self.is_pass_file_exists_in_source() {
-            if let Some(pass) = &self.pass_content {
-                let serialized = serde_json::to_string_pretty(&pass)
-                    .map_err(|_| PassCreateError::CantSerializePass)?;
-
-                let pass_file_path = dir.join("pass.json");
-                fs::write(pass_file_path, serialized)
-                    .map_err(|err| PassCreateError::CantWritePassFile(err.to_string()))?;
-            }
-        }
-        Ok(())
-    }
-
-    fn copy_source_files_to(&mut self, dir: &path::Path) -> PassResult<()> {
-        fn walk(from: &path::Path, to: &path::Path) -> std::io::Result<()> {
-            for entry in fs::read_dir(from)? {
-                // println!("{:?}", entry?);
-                let entry = entry?;
-                let entry_path = &entry.path();
-                let target = entry_path
-                    .strip_prefix(from)
-                    .map_err(|__| std::io::Error::from(std::io::ErrorKind::Other))?;
-                fs::copy(entry.path(), to.join(target))?;
-            }
-
-            Ok(())
-        }
-
-        walk(path::Path::new(&self.source_directory), dir)
-            .map_err(|_| PassCreateError::CantCopySourceToTemp)?;
-
-        Ok(())
-    }
-
-    fn calculate_hashes_of(&mut self, dir: &path::Path) -> PassResult<()> {
-        fn enumerate(dir: &path::Path) -> std::io::Result<Manifest> {
-            let mut manifest = Manifest::new();
-
-            for entry in fs::read_dir(dir)? {
-                let entry = entry?;
-                if entry.metadata()?.is_file() {
-                    let file_name = format!("{:?}", entry.file_name());
-                    let content = read_file_to_vec(entry.path())?;
-                    let hash = get_hash(&content);
-
-                    manifest.insert(file_name, hash);
-                }
-            }
-
-            Ok(manifest)
-        }
-
-        self.manifest = enumerate(dir).map_err(|_| PassCreateError::CantCalculateHashes)?;
-        Ok(())
-    }
-
-    fn write_manifest_to(&self, dir: &path::Path) -> PassResult<()> {
-        fn produce(target: &path::Path, manifest: &Manifest) -> std::io::Result<()> {
-            let file_path = target.join("manifest.json");
-            let content = serde_json::to_vec_pretty(&manifest)
-                .map_err(|_| std::io::Error::from(std::io::ErrorKind::Other))?;
-            fs::write(file_path, content)?;
-            Ok(())
-        }
-
-        produce(dir, &self.manifest).map_err(|_| PassCreateError::CantCreateManifestFile)
-    }
-}
-
-fn read_file_to_vec<P: AsRef<std::path::Path>>(path: P) -> std::io::Result<Vec<u8>> {
-    let mut file = fs::File::open(path.as_ref())?;
-    let length = file.metadata()?.len();
-    let buffer = {
-        let mut buffer: Vec<u8> = Vec::with_capacity(length as usize);
-        file.read_to_end(&mut buffer)?;
-        buffer
-    };
-
-    Ok(buffer)
-}
-
-#[inline]
-fn get_hash(content: &[u8]) -> String {
-    use sha1::Digest;
-
-    let mut hasher = sha1::Sha1::new();
-    hasher.update(content);
-    hex::encode(hasher.finalize())
 }

@@ -1,7 +1,7 @@
 use crate::field::Field;
+use crate::util::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::util::*;
 
 /// The top level of the pass.json file is a dictionary.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -610,7 +610,7 @@ impl PassBuilder {
 }
 
 pub fn rgb(r: u8, g: u8, b: u8) -> String {
-    format!("rgba({}, {}, {})", r, g, b)
+    format!("rgb({}, {}, {})", r, g, b)
 }
 
 mod test {
