@@ -1,6 +1,7 @@
 mod field;
 mod pass;
 mod personalization;
+mod signature;
 mod util;
 
 use std::collections::HashMap;
