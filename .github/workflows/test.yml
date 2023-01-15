@@ -42,7 +42,7 @@ jobs:
         with:
           command: test
           args: --release
-  test:
+  test_pass:
     name: Test
     runs-on: macos-latest
     steps:
