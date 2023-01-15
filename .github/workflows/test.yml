@@ -63,6 +63,12 @@ jobs:
       - name: Build Apple validation tool
         run: |
           cd tests/signpass/ && xcodebuild -scheme signpass -destination "platform=macOS,arch=`uname -m`" -archivePath out -verbose archive && cd ../..
+      - name: 'Archive Apple validation tool'
+        uses: actions/upload-artifact@v2
+        with:
+          name: signpass
+          path: tests/signpass/out.xcarchive/Products/usr/local/bin/signpass
+
       - name: Validate pass using Apple validation tool
         run: |
           tests/signpass/out.xcarchive/Products/usr/local/bin/signpass -v test.pkpass
