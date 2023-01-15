@@ -199,7 +199,7 @@ void PSPrintLine(NSString *format, ...) {
     }
 }
 
-+ (void)verifyPassSignatureWithURL:(NSURL *)passURL {
++ (BOOL)verifyPassSignatureWithURL:(NSURL *)passURL {
     
     if (passURL) {
         // get a temporary place to unpack the pass
@@ -221,8 +221,10 @@ void PSPrintLine(NSString *format, ...) {
             BOOL valid = [self validateManifestAtURL:tempURL] && [self validateSignatureAtURL:tempURL];
             if (valid) {
                 PSPrintLine(@"\n*** SUCCEEDED ***");
+                return YES;
             } else {
                 PSPrintLine(@"\n*** FAILED ***");
+                return NO;
             }
         }
     }

@@ -63,7 +63,10 @@ int main (int argc, const char * argv[])
                 [PassSigner signPassWithURL:passURL certSuffix:certSuffix outputURL:outputURL zip:YES];
             } else if (verifyPath) {
                 NSURL *verifyURL = [NSURL fileURLWithPath:verifyPath];
-                [PassSigner verifyPassSignatureWithURL:verifyURL];
+                BOOL result = [PassSigner verifyPassSignatureWithURL:verifyURL];
+                if (!result) {
+                    return 1;
+                }
             }
         }
     }

@@ -8,6 +8,6 @@ void PSPrintLine(NSString *format, ...);
 
 @interface PassSigner : NSObject
 
-+ (void)signPassWithURL:(NSURL *)passURL certSuffix:(NSString*)certSuffix outputURL:(NSURL *)outputURL zip:(BOOL)zip;
-+ (void)verifyPassSignatureWithURL:(NSURL *)passURL;
++ (void)signPassWithURL:(NSURL *)passURL certSuffix:(NSString *)certSuffix outputURL:(NSURL *)outputURL zip:(BOOL)zip;
++ (BOOL)verifyPassSignatureWithURL:(NSURL *)passURL;
 @end
