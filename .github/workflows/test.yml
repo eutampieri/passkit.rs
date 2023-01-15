@@ -57,6 +57,9 @@ jobs:
         with:
           command: run
           args: --example create_pass
+      - name: List current directory
+        run: |
+          pwd && ls
       - name: Build Apple validation tool
         run: |
           cd tests/signpass/ && xcodebuild -scheme signpass -destination "platform=macOS,arch=`uname -m`" -archivePath out -verbose archive && cd ../..
