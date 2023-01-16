@@ -6,6 +6,7 @@ mod util;
 
 use std::collections::HashMap;
 use std::fmt;
+use std::fmt::Debug;
 use std::fs;
 use std::io::prelude::*;
 use std::path;
@@ -27,6 +28,7 @@ pub enum PassCreateError {
     CantWritePassFile(String),
     CantCalculateHashes,
     CantCreateManifestFile,
+    CantSignManifest(String),
 }
 
 impl fmt::Display for PassCreateError {
@@ -45,6 +47,7 @@ impl fmt::Display for PassCreateError {
             CantWritePassFile(cause) => format!("Can't write pass.json {}", cause),
             CantCalculateHashes => "Can't calculate hashes for temp directory".to_string(),
             CantCreateManifestFile => "Can't create manifest file at temp directory".to_string(),
+            CantSignManifest(e) => format!("OpenSSL error: {:?}", e),
         };
         write!(f, "PassCreateError: {}", stringified)
     }
@@ -63,20 +66,47 @@ impl From<serde_json::Error> for PassCreateError {
     }
 }
 
+impl From<openssl::error::ErrorStack> for PassCreateError {
+    fn from(value: openssl::error::ErrorStack) -> Self {
+        Self::CantSignManifest(value.to_string())
+    }
+}
+
 type PassResult<T> = Result<T, PassCreateError>;
 type Manifest = HashMap<String, String>;
 
 /// Describes .pass directory with source files
-#[derive(Debug, Default)]
 pub struct PassSource {
     /// place where images contains
     source_directory: String,
+    certificate: openssl::x509::X509,
+    private_key: openssl::pkcs12::ParsedPkcs12,
+}
+
+impl Debug for PassSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PassSource")
+            .field("source_directory", &self.source_directory)
+            .field("certificate", &self.certificate)
+            .field("private_key", &"<Hidden>")
+            .finish()
+    }
 }
 
 impl PassSource {
-    pub fn new<S: Into<String>>(source: S) -> PassSource {
+    pub fn new<S: Into<String>>(
+        source: S,
+        certificate_bytes: &[u8],
+        private_key_bytes: &[u8],
+        private_key_password: &str,
+    ) -> PassSource {
         PassSource {
             source_directory: source.into(),
+            certificate: openssl::x509::X509::from_der(certificate_bytes).unwrap(),
+            private_key: openssl::pkcs12::Pkcs12::from_der(private_key_bytes)
+                .unwrap()
+                .parse(private_key_password)
+                .unwrap(),
         }
     }
 
@@ -109,15 +139,17 @@ impl PassSource {
             self.add_file_to_zip(&mut zip_writer, &filename, &bytes);
         }
 
+        let manifest = serde_json::to_vec(&manifest)?;
+
         // Add manifest
-        self.add_file_to_zip(
-            &mut zip_writer,
-            "manifest.json",
-            &serde_json::to_vec(&manifest)?,
-        );
+        self.add_file_to_zip(&mut zip_writer, "manifest.json", &manifest);
 
         // Sign manifest
-        // TODO
+        self.add_file_to_zip(
+            &mut zip_writer,
+            "signatuer",
+            &crate::signature::sign(&self.certificate, &self.private_key.pkey, &manifest)?,
+        );
 
         zip_writer.finish().unwrap();
         drop(zip_writer);

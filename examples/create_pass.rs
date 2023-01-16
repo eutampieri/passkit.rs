@@ -28,7 +28,7 @@ fn main() {
 
     // println!("{}", serde_json::to_string_pretty(&pass).unwrap());
 
-    let mut source = PassSource::new("examples/BoardingPass.pass/");
+    let mut source = PassSource::new("examples/BoardingPass.pass/", todo!(), todo!(), todo!());
 
     let pass = source.build_pkpass(Some(pass)).expect("Example failed");
     std::fs::write("test.pkpass", pass).expect("Could not save pkpass file");

@@ -1,24 +1,19 @@
-fn sign(key: rsa::RsaPrivateKey, to_sign: &[u8]) -> Vec<u8> {
-    let signature = key.sign(
-        rsa::PaddingScheme::PKCS1v15Sign {
-            hash_len: todo!(),
-            prefix: todo!(),
-        },
-        todo!(),
-    );
-    vec![]
+use openssl::{pkey::HasPrivate, stack::Stack};
+
+pub fn sign<T: HasPrivate>(
+    certificate: &openssl::x509::X509,
+    key: &openssl::pkey::PKey<T>,
+    to_sign: &[u8],
+) -> Result<Vec<u8>, openssl::error::ErrorStack> {
+    let mut chain = Stack::new()?;
+    chain.push(get_wwdr()?)?;
+    let mut flags = openssl::pkcs7::Pkcs7Flags::empty();
+    flags.set(openssl::pkcs7::Pkcs7Flags::BINARY, true);
+    flags.set(openssl::pkcs7::Pkcs7Flags::DETACHED, true);
+    let pkcs7 = openssl::pkcs7::Pkcs7::sign(&certificate, &key, &chain, to_sign, flags)?;
+    pkcs7.to_der()
 }
 
-fn loremipsum() -> Result<(), ()> {
-    /*let certificate_bytes =
-        include_bytes!("/Users/eugeniotampieri/Downloads/Cinema Pedagna - biglietti.p12");
-    let document = dbg!(der::SecretDocument::try_from(certificate_bytes.as_slice()));
-    let document = document.unwrap();
-    //rsa::RsaPrivateKey::from*/
-    Ok(())
-}
-
-#[test]
-fn test() {
-    loremipsum();
+fn get_wwdr() -> Result<openssl::x509::X509, openssl::error::ErrorStack> {
+    todo!()
 }
