@@ -15,5 +15,5 @@ pub fn sign<T: HasPrivate>(
 }
 
 fn get_wwdr() -> Result<openssl::x509::X509, openssl::error::ErrorStack> {
-    todo!()
+    openssl::x509::X509::from_der(include_bytes!("../wwdr.cer"))
 }

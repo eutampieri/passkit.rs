@@ -102,7 +102,7 @@ impl PassSource {
     ) -> PassSource {
         PassSource {
             source_directory: source.into(),
-            certificate: openssl::x509::X509::from_der(certificate_bytes).unwrap(),
+            certificate: dbg!(openssl::x509::X509::from_der(certificate_bytes)).unwrap(),
             private_key: openssl::pkcs12::Pkcs12::from_der(private_key_bytes)
                 .unwrap()
                 .parse(private_key_password)
@@ -147,7 +147,7 @@ impl PassSource {
         // Sign manifest
         self.add_file_to_zip(
             &mut zip_writer,
-            "signatuer",
+            "signature",
             &crate::signature::sign(&self.certificate, &self.private_key.pkey, &manifest)?,
         );
 

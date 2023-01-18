@@ -11,7 +11,7 @@ use std::error::Error;
 use std::fs;
 
 fn main() {
-    let pass = PassBuilder::new("0001", "pass.com.sergeysova.ex", "CDHE9L6U22")
+    let pass = PassBuilder::new("0001", "pass.it.cinemapedagna.tkt", "5BW43H5V5J")
         .web_service(
             "vxwxd7J8AlNNFPS8k0a0FfUFtq0ewzFdc",
             "https://example.com/passes/",
@@ -28,7 +28,12 @@ fn main() {
 
     // println!("{}", serde_json::to_string_pretty(&pass).unwrap());
 
-    let mut source = PassSource::new("examples/BoardingPass.pass/", todo!(), todo!(), todo!());
+    let mut source = PassSource::new(
+        "examples/BoardingPass.pass/",
+        include_bytes!(env!("PASS_CERTIFICATE")).as_slice(),
+        include_bytes!(env!("PASS_KEY")).as_slice(),
+        "",
+    );
 
     let pass = source.build_pkpass(Some(pass)).expect("Example failed");
     std::fs::write("test.pkpass", pass).expect("Could not save pkpass file");
